@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BOS-BBC 2.0 — The Maintenance Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  :root {
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e334d;
+    --green:#22c55e; --amber:#f59e0b; --indigo:#818cf8; --red:#ef4444;
+    --text:#f1f5f9; --muted:#94a3b8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;padding-bottom:90px;}
+
+  /* ── USER PICKER ── */
+  .picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:32px;touch-action:manipulation;}
+  .picker-title{font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:4px;}
+  .picker-sub{font-size:22px;font-weight:900;color:var(--text);text-align:center;line-height:1.2;margin-bottom:8px;}
+  .picker-cards{display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px;}
+  .picker-card{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:18px 20px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.15s;width:100%;text-align:left;-webkit-appearance:none;appearance:none;}
+  .picker-card:active{transform:scale(0.97);opacity:0.85;}
+  .picker-card.ryan{border-color:#3b82f6;}
+  .picker-card.mick{border-color:#a855f7;}
+  .picker-card.stephen{border-color:#ec4899;}
+  .picker-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+  .picker-avatar.ryan{background:#1d4ed8;}
+  .picker-avatar.mick{background:#7e22ce;}
+  .picker-avatar.stephen{background:#be185d;}
+  .picker-name{font-size:18px;font-weight:800;}
+  .picker-name.ryan{color:#60a5fa;}
+  .picker-name.mick{color:#c084fc;}
+  .picker-name.stephen{color:#f472b6;}
+
+  /* ── HEADER ── */
+  .header{background:linear-gradient(160deg,#1a1d27 0%,#0f1117 100%);padding:16px 16px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+  .header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .challenge-name{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:2px;}
+  .challenge-title{font-size:18px;font-weight:900;line-height:1.1;}
+  .user-chip{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 10px 5px 6px;cursor:pointer;}
+  .user-chip-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+  .user-chip-dot.ryan{background:#1d4ed8;color:#bfdbfe;}
+  .user-chip-dot.mick{background:#7e22ce;color:#e9d5ff;}
+  .user-chip-dot.stephen{background:#be185d;color:#fce7f3;}
+  .user-chip-name{font-size:12px;font-weight:700;color:var(--text);}
+  .week-info{font-size:10px;color:var(--muted);font-weight:600;text-align:center;}
+  .week-num{font-size:15px;font-weight:900;color:var(--text);}
+
+  /* ── RINGS ── */
+  .rings-row{display:flex;justify-content:space-around;align-items:center;padding:4px 0 0;gap:4px;}
+  .ring-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .ring-wrap{position:relative;width:60px;height:60px;}
+  .ring-wrap svg{transform:rotate(-90deg);}
+  .ring-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+  .ring-label{font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);}
+
+  /* ── TABS ── */
+  .tabs{display:flex;padding:10px 16px 0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;gap:0;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{padding:7px 12px 9px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all 0.15s;}
+  .tab.active-diet{color:var(--green);border-color:var(--green);}
+  .tab.active-activity{color:var(--amber);border-color:var(--amber);}
+  .tab.active-mental{color:var(--indigo);border-color:var(--indigo);}
+  .tab.active-log{color:var(--text);border-color:var(--text);}
+  .tab.active-crew{color:#f472b6;border-color:#f472b6;}
+
+  /* ── CONTENT ── */
+  .content{padding:14px;}
+
+  /* ── DAY SELECTOR ── */
+  .day-selector{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;margin-bottom:14px;}
+  .day-selector::-webkit-scrollbar{display:none;}
+  .day-btn{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 9px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all 0.15s;min-width:42px;}
+  .day-btn .d-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;}
+  .day-btn .d-num{font-size:15px;font-weight:800;color:var(--text);}
+  .day-btn .d-dot{width:5px;height:5px;border-radius:50%;background:var(--border);}
+  .day-btn.today{border-color:var(--amber);}
+  .day-btn.today .d-num{color:var(--amber);}
+  .day-btn.selected{background:var(--surface2);border-color:var(--text);}
+  .day-btn.has-data .d-dot{background:var(--green);}
+
+  /* ── STREAK ── */
+  .streak-badge{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--amber);margin-bottom:12px;}
+
+  /* ── SECTION HEADER ── */
+  .section-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .section-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+  .section-icon.diet{background:#14532d;} .section-icon.activity{background:#78350f;} .section-icon.mental{background:#312e81;}
+  .section-title{font-size:15px;font-weight:800;}
+  .section-title.diet{color:var(--green);} .section-title.activity{color:var(--amber);} .section-title.mental{color:var(--indigo);}
+
+  /* ── HABIT CARD ── */
+  .habit-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px;margin-bottom:10px;}
+  .habit-row{display:flex;align-items:flex-start;gap:12px;}
+  .habit-check{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all 0.15s;font-size:13px;}
+  .habit-check.checked.diet{background:var(--green);border-color:var(--green);}
+  .habit-check.checked.activity{background:var(--amber);border-color:var(--amber);}
+  .habit-check.checked.mental{background:var(--indigo);border-color:var(--indigo);}
+  .habit-info{flex:1;}
+  .habit-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;line-height:1.3;}
+  .habit-sub{font-size:11px;color:var(--muted);line-height:1.4;}
+
+  /* ── COUNTER ── */
+  .counter-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  .counter-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;transition:all 0.15s;user-select:none;}
+  .counter-val{font-size:20px;font-weight:900;min-width:32px;text-align:center;}
+  .counter-target{font-size:12px;color:var(--muted);}
+  .counter-val.met.diet{color:var(--green);} .counter-val.met.activity{color:var(--amber);} .counter-val.met.mental{color:var(--indigo);}
+  .counter-val.over{color:var(--red);}
+
+  /* ── WATER ── */
+  .water-glasses{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;}
+  .glass-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all 0.15s;}
+  .glass-btn.filled{background:#0c4a6e;border-color:#0ea5e9;}
+  .water-label{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  /* ── NOTES ── */
+  .notes-area{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;resize:none;outline:none;margin-top:12px;min-height:70px;}
+  .notes-area:focus{border-color:var(--muted);}
+
+  /* ── LOG ── */
+  .log-week-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;margin-top:14px;}
+  .log-week-title:first-child{margin-top:0;}
+  .log-day-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .log-day-date{font-size:13px;font-weight:800;min-width:34px;color:var(--text);}
+  .log-day-date .log-dow{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;}
+  .log-bars{flex:1;display:flex;flex-direction:column;gap:4px;}
+  .log-bar-row{display:flex;align-items:center;gap:5px;}
+  .log-bar-bg{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .log-bar-fill{height:100%;border-radius:3px;transition:width 0.3s ease;}
+  .log-bar-fill.diet{background:var(--green);} .log-bar-fill.activity{background:var(--amber);} .log-bar-fill.mental{background:var(--indigo);}
+  .log-bar-icon{font-size:10px;width:13px;}
+  .log-score{font-size:17px;font-weight:900;color:var(--muted);min-width:34px;text-align:right;}
+  .log-score.great{color:var(--green);} .log-score.good{color:var(--amber);}
+
+  /* ── CREW TAB ── */
+  .crew-person{background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:14px;overflow:hidden;}
+  .crew-person-header{padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;}
+  .crew-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0;}
+  .crew-avatar.ryan{background:#1d4ed8;color:#bfdbfe;}
+  .crew-avatar.mick{background:#7e22ce;color:#e9d5ff;}
+  .crew-avatar.stephen{background:#be185d;color:#fce7f3;}
+  .crew-name{font-size:16px;font-weight:800;flex:1;}
+  .crew-name.ryan{color:#60a5fa;} .crew-name.mick{color:#c084fc;} .crew-name.stephen{color:#f472b6;}
+  .crew-overall{font-size:20px;font-weight:900;}
+  .crew-streak{font-size:11px;color:var(--muted);font-weight:600;}
+  .crew-rings{display:flex;justify-content:space-around;padding:0 14px 14px;gap:8px;}
+  .crew-ring-item{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .crew-ring-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .crew-detail{padding:0 14px 14px;display:none;}
+  .crew-detail.open{display:block;}
+  .crew-detail-section{margin-bottom:10px;}
+  .crew-detail-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
+  .crew-detail-title.diet{color:var(--green);} .crew-detail-title.activity{color:var(--amber);} .crew-detail-title.mental{color:var(--indigo);}
+  .crew-habit-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+  .crew-dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;}
+  .crew-dot.on.diet{background:var(--green);border-color:var(--green);}
+  .crew-dot.on.activity{background:var(--amber);border-color:var(--amber);}
+  .crew-dot.on.mental{background:var(--indigo);border-color:var(--indigo);}
+  .crew-habit-label{font-size:12px;color:var(--muted);}
+  .crew-counter-badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+  .crew-notes-box{background:var(--surface2);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--muted);line-height:1.5;margin-top:2px;font-style:italic;}
+  .crew-loading{text-align:center;padding:30px;color:var(--muted);font-size:14px;}
+  .crew-empty{text-align:center;padding:20px;color:var(--muted);font-size:13px;}
+
+  /* ── SAVE BTN ── */
+  .save-btn{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#22c55e,#16a34a);color:white;border:none;border-radius:50px;padding:13px 34px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(34,197,94,0.4);transition:all 0.15s;z-index:200;}
+  .save-btn:active{transform:translateX(-50%) scale(0.97);}
+  .save-btn.saved{background:linear-gradient(135deg,#64748b,#475569);box-shadow:none;}
+  .save-btn.saving{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 20px rgba(245,158,11,0.4);}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;top:-60px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:50px;font-size:14px;font-weight:700;z-index:300;transition:top 0.3s ease;white-space:nowrap;}
+  .toast.show{top:16px;}
+
+  /* ── END NOTE ── */
+  .end-note{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px;margin-top:8px;}
+  .end-note h3{font-size:14px;font-weight:800;color:var(--amber);margin-bottom:7px;}
+  .end-note p{font-size:13px;color:var(--muted);line-height:1.6;}
+  .end-note .question{margin-top:9px;padding:9px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--text);line-height:1.5;}
+
+  .hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast">✓ Saved!</div>
+
+<!-- USER PICKER -->
+<div class="picker-overlay" id="picker">
+  <div class="picker-title">BOS-BBC 2.0</div>
+  <div class="picker-sub">The Maintenance<br>Edition</div>
+  <div class="picker-cards">
+    <button class="picker-card ryan" onclick="selectUser('ryan')">
+      <div class="picker-avatar ryan">RG</div>
+      <div class="picker-name ryan">Ryan</div>
+    </button>
+    <button class="picker-card mick" onclick="selectUser('mick')">
+      <div class="picker-avatar mick">MM</div>
+      <div class="picker-name mick">Mick</div>
+    </button>
+    <button class="picker-card stephen" onclick="selectUser('stephen')">
+      <div class="picker-avatar stephen">SJ</div>
+      <div class="picker-name stephen">Stephen</div>
+    </button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="challenge-name">BOS-BBC 2.0</div>
+      <div class="challenge-title">The Maintenance Edition</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+      <div class="user-chip" onclick="switchUser()">
+        <div class="user-chip-dot" id="chip-dot"></div>
+        <div class="user-chip-name" id="chip-name">—</div>
+      </div>
+      <div class="week-info">Week <span class="week-num" id="weekNum">—</span> · <span id="weeksLeft"></span></div>
+    </div>
+  </div>
+  <div class="rings-row">
+    <div class="ring-item">
+      <div class="ring-wrap"><svg width="60" height="60" viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" fill="none" stroke="#14532d" stroke-width="6"/><circle id="ring-diet" cx="30" cy="30" r="24" fill="none" stroke="#22c55e" stroke-width="6" stroke-dasharray="150.8" stroke-dashoffset="150.8" stroke-linecap="round"/></svg><div class="ring-center" id="ring-diet-pct" style="color:var(--green)">0%</div></div>
+      <div class="ring-label" style="color:var(--green)">Diet</div>
+    </div>
+    <div class="ring-item">
+      <div class="ring-wrap"><svg width="60" height="60" viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" fill="none" stroke="#78350f" stroke-width="6"/><circle id="ring-activity" cx="30" cy="30" r="24" fill="none" stroke="#f59e0b" stroke-width="6" stroke-dasharray="150.8" stroke-dashoffset="150.8" stroke-linecap="round"/></svg><div class="ring-center" id="ring-activity-pct" style="color:var(--amber)">0%</div></div>
+      <div class="ring-label" style="color:var(--amber)">Activity</div>
+    </div>
+    <div class="ring-item">
+      <div class="ring-wrap"><svg width="60" height="60" viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" fill="none" stroke="#312e81" stroke-width="6"/><circle id="ring-mental" cx="30" cy="30" r="24" fill="none" stroke="#818cf8" stroke-width="6" stroke-dasharray="150.8" stroke-dashoffset="150.8" stroke-linecap="round"/></svg><div class="ring-center" id="ring-mental-pct" style="color:var(--indigo)">0%</div></div>
+      <div class="ring-label" style="color:var(--indigo)">Mental</div>
+    </div>
+    <div class="ring-item">
+      <div class="ring-wrap"><svg width="60" height="60" viewBox="0 0 60 60"><circle cx="30" cy="30" r="24" fill="none" stroke="#1e293b" stroke-width="6"/><circle id="ring-overall" cx="30" cy="30" r="24" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-dasharray="150.8" stroke-dashoffset="150.8" stroke-linecap="round"/></svg><div class="ring-center" id="ring-overall-pct" style="color:var(--text);font-size:11px">0%</div></div>
+      <div class="ring-label">Overall</div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active-diet" onclick="showTab('diet')" id="tab-diet">🥦 Diet</div>
+  <div class="tab" onclick="showTab('activity')" id="tab-activity">💪 Activity</div>
+  <div class="tab" onclick="showTab('mental')" id="tab-mental">🧘 Mental</div>
+  <div class="tab" onclick="showTab('log')" id="tab-log">📋 Log</div>
+  <div class="tab" onclick="showTab('crew')" id="tab-crew">👥 Crew</div>
+</div>
+
+<div class="content">
+  <div class="day-selector" id="day-selector"></div>
+  <div class="streak-badge" id="streak-badge">🔥 0-day streak</div>
+
+  <!-- DIET -->
+  <div id="tab-content-diet">
+    <div class="section-header"><div class="section-icon diet">🥦</div><div class="section-title diet">Diet Commitments</div></div>
+    <div class="habit-card"><div class="habit-row"><button class="habit-check" id="chk-veggies" onclick="toggleCheck('veggies','diet')"></button><div class="habit-info"><div class="habit-name">Vegetables at a meal today</div><div class="habit-sub">At least 1 meal had vegetables</div></div></div></div>
+    <div class="habit-card"><div class="habit-row"><div class="habit-info"><div class="habit-name">🍦 Treats this week</div><div class="habit-sub">Ice cream, candy, chips — max 3/week</div></div></div><div class="counter-row"><button class="counter-btn" onclick="changeCounter('treats',-1)">−</button><div class="counter-val" id="val-treats">0</div><div class="counter-target">/ 3 max</div><button class="counter-btn" onclick="changeCounter('treats',1)">+</button></div></div>
+    <div class="habit-card"><div class="habit-row"><div class="habit-info"><div class="habit-name">🥤 Treat drinks this week</div><div class="habit-sub">Alcohol, soda, hot chocolate — max 3/week</div></div></div><div class="counter-row"><button class="counter-btn" onclick="changeCounter('drinks',-1)">−</button><div class="counter-val" id="val-drinks">0</div><div class="counter-target">/ 3 max</div><button class="counter-btn" onclick="changeCounter('drinks',1)">+</button></div></div>
+    <div class="habit-card"><div class="habit-row"><div class="habit-info"><div class="habit-name">💧 Water today</div><div class="habit-sub">½ your body weight in oz — tap to track</div></div></div><div class="water-glasses" id="water-glasses"></div><div class="water-label" id="water-label">0 of 10 glasses</div></div>
+  </div>
+
+  <!-- ACTIVITY -->
+  <div id="tab-content-activity" class="hidden">
+    <div class="section-header"><div class="section-icon activity">💪</div><div class="section-title activity">Physical Activity</div></div>
+    <div class="habit-card"><div class="habit-row"><div class="habit-info"><div class="habit-name">🏋️ Workouts this week</div><div class="habit-sub">Goal: 3 per week</div></div></div><div class="counter-row"><button class="counter-btn" onclick="changeCounter('workouts',-1)">−</button><div class="counter-val" id="val-workouts">0</div><div class="counter-target">/ 3 goal</div><button class="counter-btn" onclick="changeCounter('workouts',1)">+</button></div></div>
+    <div class="habit-card"><div class="habit-row"><button class="habit-check" id="chk-walk" onclick="toggleCheck('walk','activity')"></button><div class="habit-info"><div class="habit-name">🚶 Daily walk</div><div class="habit-sub">At least 20 minutes today</div></div></div></div>
+    <div class="habit-card"><div class="habit-row"><button class="habit-check" id="chk-sleep" onclick="toggleCheck('sleep','activity')"></button><div class="habit-info"><div class="habit-name">😴 Sleep commitment</div><div class="habit-sub">Attempted 7+ hours last night</div></div></div></div>
+  </div>
+
+  <!-- MENTAL -->
+  <div id="tab-content-mental" class="hidden">
+    <div class="section-header"><div class="section-icon mental">🧘</div><div class="section-title mental">Mental Health</div></div>
+    <div class="habit-card"><div class="habit-row"><div class="habit-info"><div class="habit-name">🎯 Joyful activity this week</div><div class="habit-sub">Fishing, Starkey deep-dive, whatever fills your tank — 2x/week</div></div></div><div class="counter-row"><button class="counter-btn" onclick="changeCounter('joy',-1)">−</button><div class="counter-val" id="val-joy">0</div><div class="counter-target">/ 2 goal</div><button class="counter-btn" onclick="changeCounter('joy',1)">+</button></div></div>
+    <div class="habit-card"><div class="habit-row"><button class="habit-check" id="chk-silence" onclick="toggleCheck('silence','mental')"></button><div class="habit-info"><div class="habit-name">🤫 Silence / Solitude / Prayer</div><div class="habit-sub">15 minutes this week (1x/week)</div></div></div></div>
+    <div class="habit-card"><div class="habit-row"><button class="habit-check" id="chk-phone" onclick="toggleCheck('phone','mental')"></button><div class="habit-info"><div class="habit-name">📵 Intentional phone-free time</div><div class="habit-sub">Put the phone away today</div></div></div></div>
+    <div class="habit-card"><div class="habit-row"><button class="habit-check" id="chk-reach" onclick="toggleCheck('reach','mental')"></button><div class="habit-info"><div class="habit-name">💌 Reach out with appreciation</div><div class="habit-sub">1x/week — tell someone something specific you appreciate</div></div></div></div>
+    <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px;margin-top:4px;">Today's note (optional)</div>
+    <textarea class="notes-area" id="day-notes" placeholder="Reflections, wins, struggles..." oninput="notesChanged()"></textarea>
+  </div>
+
+  <!-- LOG -->
+  <div id="tab-content-log" class="hidden">
+    <div id="log-content"></div>
+    <div class="end-note">
+      <h3>🎯 Wrap-Up Call — Late August/Early September</h3>
+      <p>Keep these in mind throughout the challenge:</p>
+      <div class="question">1. What is 1 thing I learned about myself (or something reiterated about me)?</div>
+      <div class="question">2. What is 1 thing I am proud of that happened due to this experience?</div>
+    </div>
+  </div>
+
+  <!-- CREW -->
+  <div id="tab-content-crew" class="hidden">
+    <div id="crew-content"><div class="crew-loading">Loading crew data…</div></div>
+  </div>
+</div>
+
+<button class="save-btn" id="save-btn" onclick="saveDay()">Save Today</button>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+const CHALLENGE_START = new Date(2026,5,8);
+const CHALLENGE_END   = new Date(2026,7,16);
+const TOTAL_DAYS = 70;
+const USERS = ['ryan','mick','stephen'];
+const USER_LABELS = { ryan:'Ryan', mick:'Mick', stephen:'Stephen' };
+const USER_INITIALS = { ryan:'RG', mick:'MM', stephen:'SJ' };
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+let currentUser = null;
+let localData   = {};   // currentUser's full data (days + weeks)
+let selectedDate = '';
+let currentTab  = 'diet';
+
+// ── DATE HELPERS ─────────────────────────────────────────────────────────────
+function fmtKey(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function todayKey(){ return fmtKey(new Date()); }
+function weekKey(dateStr){
+  const d=new Date(dateStr+'T12:00:00');
+  const day=d.getDay(), diff=(day===0)?-6:1-day;
+  const mon=new Date(d); mon.setDate(d.getDate()+diff);
+  return 'week_'+fmtKey(mon);
+}
+function getDayData(key){
+  if(!localData[key]) localData[key]={checks:{},water:0,notes:''};
+  return localData[key];
+}
+function getWeekData(wk){
+  if(!localData[wk]) localData[wk]={treats:0,drinks:0,workouts:0,joy:0};
+  return localData[wk];
+}
+
+// ── STORAGE: localStorage (own data) + JSONBin (shared sync) ─────────────────
+// JSONBin.io free tier — one bin per user, public read, key-protected write
+// Bin IDs and API key are set once below. Replace with your own if needed.
+const JSONBIN_KEY  = '$2a$10$skBOINlYhIQo1XW3M8yThOQXtMgc93WiMA9Hww1LHEBxP5r./pyae';
+const JSONBIN_BINS = {
+  ryan:    '6a2b6cbcda38895dfeb219f9',
+  mick:    '6a2b6d24f5f4af5e29e39f35',
+  stephen: '6a2b6d86da38895dfeb21cc3'
+};
+const BINS_READY = !JSONBIN_BINS.ryan.startsWith('BIN_ID'); // false until configured
+
+function lsKey(user){ return 'bosbbc2_' + user; }
+
+function saveLocal(user, data){
+  try { localStorage.setItem(lsKey(user), JSON.stringify(data)); } catch(e){}
+}
+function loadLocal(user){
+  try { const r=localStorage.getItem(lsKey(user)); return r?JSON.parse(r):{};} catch(e){ return {}; }
+}
+
+async function saveToShared(user, data){
+  saveLocal(user, data); // always save locally first
+  if(!BINS_READY) return;
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BINS[user]}`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY,'X-Bin-Versioning':'false'},
+      body: JSON.stringify(data)
+    });
+  } catch(e){ console.warn('Sync failed, data saved locally',e); }
+}
+
+async function loadFromShared(user){
+  // always return local data for currentUser (already loaded)
+  if(user===currentUser) return localData;
+  // try remote first, fall back to local
+  if(!BINS_READY) return loadLocal(user);
+  try {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BINS[user]}/latest`,{
+      headers:{'X-Master-Key':JSONBIN_KEY}
+    });
+    if(!r.ok) return loadLocal(user);
+    const j = await r.json();
+    const data = j.record || {};
+    saveLocal(user, data); // cache it locally
+    return data;
+  } catch(e){ return loadLocal(user); }
+}
+
+// ── USER SELECTION ──────────────────────────────────────────────────────────
+async function selectUser(user){
+  currentUser = user;
+  document.getElementById('picker').classList.add('hidden');
+
+  // load this user's own data from localStorage
+  localData = loadLocal(user);
+
+  // chip
+  const dot = document.getElementById('chip-dot');
+  dot.className = 'user-chip-dot ' + user;
+  dot.textContent = USER_INITIALS[user];
+  document.getElementById('chip-name').textContent = USER_LABELS[user];
+
+  selectedDate = todayKey();
+  buildDaySelector();
+  renderCurrentDay();
+  updateWeekBadge();
+  updateRings();
+  showTab('diet');
+}
+function switchUser(){
+  document.getElementById('picker').classList.remove('hidden');
+}
+
+// ── WEEK BADGE ──────────────────────────────────────────────────────────────
+function updateWeekBadge(){
+  const now=new Date();
+  const msDay=86400000;
+  const dayNum=Math.floor((now-CHALLENGE_START)/msDay)+1;
+  const wk=Math.max(1,Math.min(10,Math.ceil(dayNum/7)));
+  document.getElementById('weekNum').textContent=wk;
+  const left=10-wk;
+  document.getElementById('weeksLeft').textContent=left>0?left+' wks left':'Final week!';
+}
+
+// ── DAY SELECTOR ─────────────────────────────────────────────────────────────
+function buildDaySelector(){
+  const sel=document.getElementById('day-selector');
+  sel.innerHTML='';
+  const today=todayKey();
+  const dayLabels=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  for(let i=13;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const key=fmtKey(d);
+    if(key<fmtKey(CHALLENGE_START)) continue;
+    const btn=document.createElement('div');
+    btn.className='day-btn';
+    if(key===today) btn.classList.add('today');
+    if(key===selectedDate) btn.classList.add('selected');
+    const dd=localData[key];
+    if(dd&&(Object.keys(dd.checks||{}).length>0||dd.water>0)) btn.classList.add('has-data');
+    btn.innerHTML=`<div class="d-label">${dayLabels[d.getDay()]}</div><div class="d-num">${d.getDate()}</div><div class="d-dot"></div>`;
+    btn.onclick=()=>{ selectedDate=key; buildDaySelector(); renderCurrentDay(); updateRings(); };
+    sel.appendChild(btn);
+  }
+  sel.scrollLeft=sel.scrollWidth;
+}
+
+// ── RENDER DAY ───────────────────────────────────────────────────────────────
+function renderCurrentDay(){
+  const day=getDayData(selectedDate);
+  const wdata=getWeekData(weekKey(selectedDate));
+  ['veggies','walk','sleep','silence','phone','reach'].forEach(id=>{
+    const el=document.getElementById('chk-'+id); if(!el) return;
+    const cat=getCat(id);
+    el.className='habit-check'+(day.checks[id]?' checked '+cat:'');
+    el.textContent=day.checks[id]?'✓':'';
+  });
+  ['treats','drinks','workouts','joy'].forEach(id=>{
+    const el=document.getElementById('val-'+id); if(el) el.textContent=wdata[id]||0;
+    updateCounterColor(id,wdata[id]||0);
+  });
+  renderWater(day.water||0);
+  const notesEl=document.getElementById('day-notes');
+  if(notesEl) notesEl.value=day.notes||'';
+  const btn=document.getElementById('save-btn');
+  btn.textContent='Save Today'; btn.classList.remove('saved','saving');
+  updateStreak();
+}
+
+function getCat(id){
+  if(id==='veggies') return 'diet';
+  if(['walk','sleep'].includes(id)) return 'activity';
+  return 'mental';
+}
+
+function updateCounterColor(id,val){
+  const el=document.getElementById('val-'+id); if(!el) return;
+  el.className='counter-val';
+  const limits={treats:3,drinks:3}, goals={workouts:3,joy:2};
+  if(id in limits){ if(val>limits[id]) el.classList.add('over'); }
+  else if(id in goals && val>=goals[id]){ el.classList.add('met'); el.classList.add(id==='workouts'?'activity':'mental'); }
+}
+
+// ── WATER ────────────────────────────────────────────────────────────────────
+function renderWater(count){
+  const c=document.getElementById('water-glasses'); c.innerHTML='';
+  for(let i=1;i<=10;i++){
+    const b=document.createElement('button');
+    b.className='glass-btn'+(i<=count?' filled':'');
+    b.textContent='🥛'; b.onclick=()=>toggleWater(i);
+    c.appendChild(b);
+  }
+  document.getElementById('water-label').textContent=count+' of 10 glasses';
+}
+function toggleWater(i){
+  const day=getDayData(selectedDate);
+  day.water=(day.water===i)?i-1:i;
+  renderWater(day.water); updateRings();
+}
+
+// ── CHECKS ───────────────────────────────────────────────────────────────────
+function toggleCheck(id,cat){
+  const day=getDayData(selectedDate);
+  day.checks[id]=!day.checks[id];
+  const el=document.getElementById('chk-'+id);
+  el.className='habit-check'+(day.checks[id]?' checked '+cat:'');
+  el.textContent=day.checks[id]?'✓':'';
+  updateRings();
+}
+
+// ── COUNTERS ─────────────────────────────────────────────────────────────────
+function changeCounter(id,delta){
+  const wdata=getWeekData(weekKey(selectedDate));
+  wdata[id]=Math.max(0,(wdata[id]||0)+delta);
+  wdata._touched=true;
+  document.getElementById('val-'+id).textContent=wdata[id];
+  updateCounterColor(id,wdata[id]);
+  updateRings();
+}
+
+// ── NOTES ────────────────────────────────────────────────────────────────────
+function notesChanged(){ getDayData(selectedDate).notes=document.getElementById('day-notes').value; }
+
+// ── SAVE ─────────────────────────────────────────────────────────────────────
+async function saveDay(){
+  const notesEl=document.getElementById('day-notes');
+  if(notesEl) getDayData(selectedDate).notes=notesEl.value;
+  getWeekData(weekKey(selectedDate))._touched=true;
+  const btn=document.getElementById('save-btn');
+  btn.textContent='Saving…'; btn.classList.add('saving');
+  await saveToShared(currentUser, localData);
+  buildDaySelector();
+  btn.textContent='✓ Saved'; btn.classList.remove('saving'); btn.classList.add('saved');
+  const toast=document.getElementById('toast');
+  toast.textContent = BINS_READY ? '✓ Saved & synced!' : '✓ Saved locally';
+  toast.classList.add('show');
+  setTimeout(()=>toast.classList.remove('show'),2500);
+}
+
+// ── SCORING ──────────────────────────────────────────────────────────────────
+// Daily points (7 possible): veggies, water, walk, sleep, phone, silence, reach
+// Weekly bonus points (4 possible): treats≤3, drinks≤3, workouts≥3, joy≥2
+// Challenge score = earned / possible * 100  (only counts days up to today)
+
+function dailyPts(dayData){
+  let p=0;
+  if((dayData.checks||{}).veggies) p++;
+  if((dayData.water||0)>=6) p++;
+  if((dayData.checks||{}).walk) p++;
+  if((dayData.checks||{}).sleep) p++;
+  if((dayData.checks||{}).phone) p++;
+  if((dayData.checks||{}).silence) p++;
+  if((dayData.checks||{}).reach) p++;
+  return p; // max 7
+}
+
+function weeklyBonusPts(wkData){
+  if(!wkData._touched) return 0; // don't award anything until user has saved this week
+  let p=0;
+  if((wkData.treats||0)<=3) p++;
+  if((wkData.drinks||0)<=3) p++;
+  if((wkData.workouts||0)>=3) p++;
+  if((wkData.joy||0)>=2) p++;
+  return p; // max 4
+}
+
+// Score for today's rings (uses daily + weekly snapshot)
+function scoreForData(dayData, wkData){
+  const touched = !!wkData._touched;
+  let d=0,a=0,m=0;
+  if((dayData.checks||{}).veggies) d++;
+  if(touched && (wkData.treats||0)<=3) d++;
+  if(touched && (wkData.drinks||0)<=3) d++;
+  if((dayData.water||0)>=6) d++;
+  if((dayData.checks||{}).walk) a++;
+  if((dayData.checks||{}).sleep) a++;
+  if(touched && (wkData.workouts||0)>=3) a++;
+  if((dayData.checks||{}).silence) m++;
+  if((dayData.checks||{}).phone) m++;
+  if((dayData.checks||{}).reach) m++;
+  if(touched && (wkData.joy||0)>=2) m++;
+  const dp=dailyPts(dayData), wb=weeklyBonusPts(wkData);
+  return {d,a,m,dp:Math.round(d/4*100),ap:Math.round(a/3*100),mp:Math.round(m/4*100),overall:Math.round((dp+wb)/11*100)};
+}
+
+// Full 0-100 challenge score across entire 10-week period
+function calcChallengeScore(data){
+  const today=todayKey();
+  let earned=0, possible=0;
+  const seenWeeks=new Set();
+
+  for(let i=0;i<TOTAL_DAYS;i++){
+    const d=new Date(CHALLENGE_START); d.setDate(d.getDate()+i);
+    const key=fmtKey(d);
+    if(key>today) break;
+
+    // daily pts
+    const dd=data[key]||{};
+    earned+=dailyPts(dd);
+    possible+=7;
+
+    // weekly bonus — count once per week on the last day of that week (or today)
+    const wk=weekKey(key);
+    if(!seenWeeks.has(wk)){
+      // find last day of this week that has passed
+      const wkData=data[wk]||{};
+      earned+=weeklyBonusPts(wkData);
+      possible+=4;
+      seenWeeks.add(wk);
+    }
+  }
+  if(possible===0) return 0;
+  return Math.round(earned/possible*100);
+}
+
+function updateRings(){
+  const CIRC=150.8;
+  const today=todayKey();
+  const score=scoreForData(getDayData(today),getWeekData(weekKey(today)));
+  setRing('diet',score.dp,CIRC);
+  setRing('activity',score.ap,CIRC);
+  setRing('mental',score.mp,CIRC);
+  // overall ring shows challenge score, not just today
+  const cs=calcChallengeScore(localData);
+  setRing('overall',cs,CIRC);
+  document.getElementById('ring-overall-pct').textContent=cs;
+}
+function setRing(id,pct,circ){
+  const el=document.getElementById('ring-'+id); if(!el) return;
+  el.style.strokeDashoffset=circ-(pct/100)*circ;
+  const p=document.getElementById('ring-'+id+'-pct'); if(p) p.textContent=typeof pct==='number'&&id==='overall'?pct:pct+'%';
+}
+
+// ── STREAK ───────────────────────────────────────────────────────────────────
+function calcStreak(data){
+  let streak=0; const d=new Date();
+  for(let i=0;i<70;i++){
+    const key=fmtKey(d);
+    const dd=data[key];
+    if(!dd||(!Object.keys(dd.checks||{}).length&&!(dd.water>0))) break;
+    streak++; d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+function updateStreak(){
+  document.getElementById('streak-badge').textContent=`🔥 ${calcStreak(localData)}-day streak`;
+}
+
+// ── LOG ──────────────────────────────────────────────────────────────────────
+function buildLog(){
+  const container=document.getElementById('log-content'); container.innerHTML='';
+  const dayLabels=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let curWk=null;
+  for(let i=0;i<TOTAL_DAYS;i++){
+    const d=new Date(CHALLENGE_START); d.setDate(d.getDate()+i);
+    const key=fmtKey(d);
+    if(key>todayKey()) continue;
+    const wNum=Math.ceil((i+1)/7);
+    if(wNum!==curWk){
+      curWk=wNum;
+      const t=document.createElement('div'); t.className='log-week-title'; t.textContent=`Week ${wNum}`;
+      container.appendChild(t);
+    }
+    const dd=localData[key]||{}, wdata=localData[weekKey(key)]||{};
+    const s=scoreForData(dd,wdata);
+    const pct=s.overall;
+    const row=document.createElement('div'); row.className='log-day-row';
+    row.onclick=()=>{ selectedDate=key; showTab('diet'); };
+    row.innerHTML=`<div class="log-day-date"><div class="log-dow">${dayLabels[d.getDay()]}</div>${d.getDate()}</div>
+      <div class="log-bars">
+        <div class="log-bar-row"><span class="log-bar-icon">🥦</span><div class="log-bar-bg"><div class="log-bar-fill diet" style="width:${s.dp}%"></div></div></div>
+        <div class="log-bar-row"><span class="log-bar-icon">💪</span><div class="log-bar-bg"><div class="log-bar-fill activity" style="width:${s.ap}%"></div></div></div>
+        <div class="log-bar-row"><span class="log-bar-icon">🧘</span><div class="log-bar-bg"><div class="log-bar-fill mental" style="width:${s.mp}%"></div></div></div>
+      </div>
+      <div class="log-score ${pct>=80?'great':pct>=50?'good':''}">${pct}%</div>`;
+    container.appendChild(row);
+  }
+}
+
+// ── CREW ──────────────────────────────────────────────────────────────────────
+async function buildCrew(){
+  const container=document.getElementById('crew-content');
+  container.innerHTML='<div class="crew-loading">Loading crew…</div>';
+  let syncNotice='';
+  if(!BINS_READY){
+    syncNotice=`<div style="background:#78350f33;border:1px solid var(--amber);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--amber);line-height:1.6;">
+      <strong>⚙️ Sync not configured yet.</strong><br>Each person's data is saved locally on their own device. To enable cross-device crew visibility, set up a free JSONBin account:
+      <div style="margin-top:8px;font-size:11px;color:var(--muted);">1. Go to <strong>jsonbin.io</strong> and create a free account.<br>2. Create 3 bins (one per person) and copy the Bin IDs.<br>3. Copy your Master API key.<br>4. Paste all 4 values into JSONBIN_KEY / JSONBIN_BINS in the HTML file.</div>
+    </div>`;
+  }
+  const today=todayKey();
+
+  // load all three users
+  const allUserData={};
+  for(const user of USERS){
+    allUserData[user] = user===currentUser ? localData : await loadFromShared(user);
+  }
+
+  // rank by challenge score
+  const ranked = USERS.map(user=>({
+    user,
+    data: allUserData[user],
+    cs: calcChallengeScore(allUserData[user]),
+    streak: calcStreak(allUserData[user])
+  })).sort((a,b)=>b.cs-a.cs);
+
+  const medalColors=['#f59e0b','#94a3b8','#b45309'];
+  const medals=['🥇','🥈','🥉'];
+
+  // leaderboard podium HTML
+  let lbHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:12px;">🏆 Challenge Leaderboard</div>`;
+
+  ranked.forEach((r,i)=>{
+    const isMe=r.user===currentUser;
+    const nameColor={ryan:'#60a5fa',mick:'#c084fc',stephen:'#f472b6'}[r.user];
+    lbHTML+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;${i<ranked.length-1?'border-bottom:1px solid var(--border);':''}">
+      <div style="font-size:22px;width:30px;text-align:center;">${medals[i]}</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:800;color:${nameColor};">${USER_LABELS[r.user]}${isMe?' <span style="font-size:10px;color:var(--muted);font-weight:600;">YOU</span>':''}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px;">🔥 ${r.streak}-day streak</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:28px;font-weight:900;color:${medalColors[i]};line-height:1;">${r.cs}</div>
+        <div style="font-size:10px;color:var(--muted);font-weight:600;">/ 100</div>
+      </div>
+    </div>`;
+  });
+  lbHTML+=`<div style="font-size:10px;color:var(--border);margin-top:10px;text-align:center;">7 pts/day · 4 weekly bonus pts · scored across all 70 days</div></div>`;
+
+  // per-person detail cards
+  const cardsHTML=USERS.map(user=>{
+    const data=allUserData[user];
+    const dd=data[today]||{}, wdata=data[weekKey(today)]||{};
+    const s=scoreForData(dd,wdata);
+    const cs=calcChallengeScore(data);
+    const streak=calcStreak(data);
+    const todayColor=s.overall>=80?'var(--green)':s.overall>=50?'var(--amber)':'var(--muted)';
+
+    const dietHabits=[
+      {label:'Veggies at a meal',cat:'diet',val:(dd.checks||{}).veggies},
+      {label:`Treats: ${wdata.treats||0}/3`,cat:'diet',val:(wdata.treats||0)<=3},
+      {label:`Treat drinks: ${wdata.drinks||0}/3`,cat:'diet',val:(wdata.drinks||0)<=3},
+      {label:`Water: ${dd.water||0}/10 glasses`,cat:'diet',val:(dd.water||0)>=6},
+    ];
+    const actHabits=[
+      {label:'Daily walk 20min',cat:'activity',val:(dd.checks||{}).walk},
+      {label:'7+ hr sleep attempt',cat:'activity',val:(dd.checks||{}).sleep},
+      {label:`Workouts: ${wdata.workouts||0}/3 this week`,cat:'activity',val:(wdata.workouts||0)>=3},
+    ];
+    const menHabits=[
+      {label:'Silence/solitude/prayer',cat:'mental',val:(dd.checks||{}).silence},
+      {label:'Intentional phone-free',cat:'mental',val:(dd.checks||{}).phone},
+      {label:'Reached out this week',cat:'mental',val:(dd.checks||{}).reach},
+      {label:`Joyful activity: ${wdata.joy||0}/2`,cat:'mental',val:(wdata.joy||0)>=2},
+    ];
+    const habitRows=h=>h.map(x=>`<div class="crew-habit-row"><div class="crew-dot ${x.val?'on':''} ${x.cat}">${x.val?'✓':''}</div><div class="crew-habit-label">${x.label}</div></div>`).join('');
+    const notesHtml=dd.notes?`<div class="crew-notes-box">"${dd.notes}"</div>`:'';
+
+    return `<div class="crew-person">
+      <div class="crew-person-header" onclick="toggleCrewDetail('${user}')">
+        <div class="crew-avatar ${user}">${USER_INITIALS[user]}</div>
+        <div style="flex:1;">
+          <div class="crew-name ${user}">${USER_LABELS[user]}</div>
+          <div class="crew-streak">🔥 ${streak}-day streak</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:var(--muted);font-weight:600;">TODAY</div>
+          <div style="font-size:20px;font-weight:900;color:${todayColor}">${s.overall}%</div>
+        </div>
+      </div>
+      <div class="crew-rings">
+        ${miniRingHTML(s.dp,'#22c55e','#14532d','Diet')}
+        ${miniRingHTML(s.ap,'#f59e0b','#78350f','Activity')}
+        ${miniRingHTML(s.mp,'#818cf8','#312e81','Mental')}
+      </div>
+      <div class="crew-detail" id="crew-detail-${user}">
+        <div class="crew-detail-section"><div class="crew-detail-title diet">🥦 Diet</div>${habitRows(dietHabits)}</div>
+        <div class="crew-detail-section"><div class="crew-detail-title activity">💪 Activity</div>${habitRows(actHabits)}</div>
+        <div class="crew-detail-section"><div class="crew-detail-title mental">🧘 Mental</div>${habitRows(menHabits)}</div>
+        ${notesHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = syncNotice + lbHTML + cardsHTML;
+}
+
+function miniRingHTML(pct, stroke, track, label){
+  const circ=94.2, offset=circ-(pct/100)*circ;
+  return `<div class="crew-ring-item">
+    <div style="position:relative;width:38px;height:38px;">
+      <svg width="38" height="38" viewBox="0 0 38 38" style="transform:rotate(-90deg)">
+        <circle cx="19" cy="19" r="15" fill="none" stroke="${track}" stroke-width="5"/>
+        <circle cx="19" cy="19" r="15" fill="none" stroke="${stroke}" stroke-width="5"
+          stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:${stroke}">${pct}%</div>
+    </div>
+    <div class="crew-ring-label">${label}</div>
+  </div>`;
+}
+
+function toggleCrewDetail(user){
+  const el=document.getElementById('crew-detail-'+user);
+  if(el) el.classList.toggle('open');
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+function showTab(tab){
+  currentTab=tab;
+  ['diet','activity','mental','log','crew'].forEach(t=>{
+    document.getElementById('tab-content-'+t).classList.toggle('hidden',t!==tab);
+    const el=document.getElementById('tab-'+t); el.className='tab';
+    if(t===tab) el.classList.add('active-'+t);
+  });
+  const daySel=document.getElementById('day-selector');
+  const streak=document.getElementById('streak-badge');
+  const saveBtn=document.getElementById('save-btn');
+  if(tab==='log'){ daySel.classList.add('hidden'); streak.classList.add('hidden'); saveBtn.classList.add('hidden'); buildLog(); }
+  else if(tab==='crew'){ daySel.classList.add('hidden'); streak.classList.add('hidden'); saveBtn.classList.add('hidden'); buildCrew(); }
+  else { daySel.classList.remove('hidden'); streak.classList.remove('hidden'); saveBtn.classList.remove('hidden'); }
+}
+</script>
+</body>
+</html>
